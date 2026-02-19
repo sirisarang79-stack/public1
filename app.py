@@ -1,70 +1,44 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 from datetime import datetime
 
-# --- 페이지 설정 ---
-st.set_page_config(page_title="우리반 학급일지", page_icon="📅", layout="centered")
+# 한글 폰트 설정 (환경에 따라 다를 수 있으나, Streamlit Cloud 배포 시 별도 설정 필요)
+# 여기서는 기본 차트를 사용합니다.
 
-# --- 데이터 저장소 초기화 ---
-# 세션 상태(Session State)를 사용하여 앱이 새로고침되어도 데이터가 유지되게 합니다.
-if 'logs' not in st.session_state:
-    st.session_state.logs = pd.DataFrame(columns=["날짜", "날씨", "출석현황", "주요학습내용", "특이사항"])
+st.set_page_config(page_title="학생 평가 기록지", page_icon="📝", layout="wide")
 
-# --- 헤더 ---
-st.title("🍎 오늘의 학급일지")
-st.write(f"오늘은 **{datetime.now().strftime('%Y년 %m월 %d일')}** 입니다.")
-st.divider()
+# --- 데이터 초기화 (세션 상태) ---
+if 'eval_data' not in st.session_state:
+    st.session_state.eval_data = pd.DataFrame(columns=[
+        "날짜", "학생이름", "과목/영역", "성취도", "수업태도", "종합의견"
+    ])
+
+# --- 사이드바: 학생 명부 관리 ---
+with st.sidebar:
+    st.header("👤 학생 관리")
+    student_list = st.text_area("학생 명단 (쉼표로 구분)", "김철수, 이영희, 박지성, 최바다").split(',')
+    student_list = [s.strip() for s in student_list]
+    
+    st.divider()
+    st.info("평가 후 아래 '데이터 초기화'를 누르면 모든 기록이 삭제됩니다.")
+    if st.button("전체 데이터 초기화"):
+        st.session_state.eval_data = pd.DataFrame(columns=["날짜", "학생이름", "과목/영역", "성취도", "수업태도", "종합의견"])
+        st.rerun()
+
+# --- 메인 화면 ---
+st.title("👨‍🏫 학생 성취도 평가 기록지")
+st.write("학습 활동 중 관찰한 학생의 성취도와 태도를 즉시 기록하세요.")
 
 # --- 입력 섹션 ---
-with st.form("log_form", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        date = st.date_input("날짜 선택", datetime.now())
-        weather = st.selectbox("오늘의 날씨", ["맑음", "흐림", "비", "눈", "미세먼지 나쁨"])
+with st.expander("➕ 새 평가 기록 작성", expanded=True):
+    with st.form("eval_form", clear_on_submit=True):
+        col1, col2, col3 = st.columns(3)
         
-    with col2:
-        attendance = st.text_input("출석 현황 (예: 전원 출석 / 결석 1명)", placeholder="출석 정보를 입력하세요")
-
-    subject_content = st.text_area("주요 학습 내용", placeholder="교시별 핵심 내용을 간단히 적어주세요.")
-    special_note = st.text_area("학급 특이사항 및 전달사항", placeholder="학생 상담, 사고, 공지사항 등")
-
-    submit_button = st.form_submit_button("일지 저장하기")
-
-# --- 데이터 저장 로직 ---
-if submit_button:
-    new_data = {
-        "날짜": date.strftime('%Y-%m-%d'),
-        "날씨": weather,
-        "출석현황": attendance,
-        "주요학습내용": subject_content,
-        "특이사항": special_note
-    }
-    # 새로운 데이터를 기존 데이터프레임에 추가
-    st.session_state.logs = pd.concat([st.session_state.logs, pd.DataFrame([new_data])], ignore_index=True)
-    st.success("오늘의 기록이 성공적으로 저장되었습니다!")
-
-# --- 조회 섹션 ---
-st.divider()
-st.subheader("📚 누적 학급 기록")
-
-if not st.session_state.logs.empty:
-    # 최신순으로 정렬하여 보여주기
-    display_df = st.session_state.logs.sort_values(by="날짜", ascending=False)
-    st.dataframe(display_df, use_container_width=True)
-    
-    # CSV 다운로드 기능
-    csv = display_df.to_csv(index=False).encode('utf-8-sig')
-    st.download_button(
-        label="📥 전체 일지 다운로드 (CSV)",
-        data=csv,
-        file_name=f"class_log_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv",
-    )
-else:
-    st.info("아직 작성된 일지가 없습니다. 첫 번째 일지를 작성해 보세요!")
-
-# --- 오늘의 한마디 (위트) ---
-st.sidebar.title("💡 선생님의 한마디")
-quote = st.sidebar.text_input("오늘의 응원 메시지", "얘들아, 오늘도 수고했어!")
-st.sidebar.info(f"✨ {quote}")
+        with col1:
+            eval_date = st.date_input("평가 날짜", datetime.now())
+            target_student = st.selectbox("학생 선택", student_list)
+        
+        with col2:
+            subject = st.text_input("과목 또는 활동명", placeholder="예: 국어(토론), 과학(실험)")
+            score = st.select_slider("성취도 레벨", options=["매우 미흡", "미흡", "보통", "우수", "매우 우수"], value="보통")
