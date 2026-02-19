@@ -47,4 +47,91 @@ if menu == "대시보드 (Global Data)":
     st.markdown("### 🔍 주요 멸종 위기종 데이터")
     species_data = {
         "이름": ["북극곰", "산호초", "바다거북", "황제펭귄"],
-        "위험 요인": ["해빙 감소", "해
+        "위험 요인": ["해빙 감소", "해수 온난화", "산란지 파괴", "유빙 감소"],
+        "등급": ["취약 (VU)", "위급 (CR)", "위기 (EN)", "준위협 (NT)"]
+    }
+    st.table(pd.DataFrame(species_data))
+
+# --- 2. 생태계 시뮬레이터 탭 ---
+elif menu == "생태계 시뮬레이터":
+    st.subheader("🌡️ 온도 상승 시나리오 시뮬레이터")
+    temp_rise = st.slider("지구 온도 상승폭 선택 (°C)", 1.0, 5.0, 1.5, 0.5)
+    st.divider()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"### 🌡️ +{temp_rise}°C 세계")
+        if temp_rise < 1.5:
+            st.success("기후 방어선 내에 있습니다.")
+            emoji = "🌤️"
+        elif 1.5 <= temp_rise < 2.0:
+            st.warning("티핑 포인트 접근. 산호초 대량 사멸.")
+            emoji = "🔥"
+        elif 2.0 <= temp_rise < 3.0:
+            st.error("돌이킬 수 없는 피해. 빙하 소멸.")
+            emoji = "🐻‍❄️💧"
+        else:
+            st.error("대멸종 위기. 생태계 붕괴.")
+            emoji = "☠️"
+        st.markdown(f"<h1 style='text-align: center; font-size: 80px;'>{emoji}</h1>", unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("### 🦋 생물학적 영향 예측")
+        if temp_rise >= 1.5: st.write("❌ **산호초 백화 현상** 심화")
+        if temp_rise >= 2.0: st.write("🐟 **해양 어류** 어획량 급감")
+        if temp_rise >= 3.0: st.write("🦟 **열대성 전염병** 고위도 확산")
+        if temp_rise >= 4.0: st.write("🌍 **지구 생물종** 절반 멸종 위기")
+
+# --- 3. 한국의 사례 탭 (업데이트됨) ---
+elif menu == "한국의 사례":
+    st.subheader("🇰🇷 한반도 생태계 지도가 바뀐다")
+    st.markdown("기온 상승으로 인해 농작물 재배 한계선이 북상하고 있습니다.")
+    
+    # 탭을 3개로 확장
+    tab1, tab2, tab3 = st.tabs(["🍎 사과 (북상)", "🍊 감귤 (상륙)", "🌲 침엽수 (위기)"])
+    
+    # 1. 사과 탭
+    with tab1:
+        st.markdown("#### 대구 사과는 옛말? 강원도 사과가 온다")
+        st.caption("사과 재배 적지가 경북에서 강원도 산간으로 이동하고 있습니다.")
+        apple_loc = pd.DataFrame({
+            'lat': [35.8, 36.5, 37.1, 38.1], # 대구 -> 충주 -> 정선 -> 양구
+            'lon': [128.6, 128.1, 128.5, 128.1],
+        })
+        st.map(apple_loc, zoom=6)
+
+    # 2. 감귤 탭 (새로 추가된 부분)
+    with tab2:
+        st.markdown("#### 제주 감귤? 이젠 '육지' 감귤!")
+        st.write("따뜻한 남해안 일대까지 아열대 기후가 확장되며 감귤 재배가 가능해졌습니다.")
+        
+        col_map, col_info = st.columns([2, 1])
+        
+        with col_map:
+            # 감귤 재배지 데이터 (제주 -> 전남/경남 해안 -> 내륙)
+            citrus_loc = pd.DataFrame({
+                'lat': [33.35, 34.30, 34.60, 34.85, 35.10],
+                'lon': [126.53, 126.70, 127.10, 128.40, 128.10],
+                # 제주, 완도, 고흥, 통영/거제, 진주(예측)
+            })
+            st.map(citrus_loc, zoom=6, color="#FFA500") # 주황색 포인트 사용(Streamlit 최신버전 지원 시)
+        
+        with col_info:
+            st.info("""
+            **주요 이동 경로**
+            1. **제주도** (전통적 주산지)
+            2. **전남 완도/고흥** (현재 활발)
+            3. **경남 거제/통영** (재배 확대)
+            4. **경남 진주/전북 등** (미래 예측)
+            """)
+            st.success("이제 내륙 지역에서도 노지 감귤 재배가 시도되고 있습니다.")
+
+    # 3. 침엽수 탭
+    with tab3:
+        st.markdown("#### 사라지는 크리스마스 트리 (구상나무)")
+        st.error("지리산, 한라산의 구상나무가 기온 상승과 수분 부족으로 말라 죽고 있습니다.")
+        st.progress(80, text="지리산 구상나무 고사 진행률 (심각)")
+        st.write("구상나무는 한국 고유종으로, 세계자연보전연맹(IUCN) 멸종위기종입니다.")
+
+st.divider()
+st.caption("Data Source: Simulated based on KMA(기상청) Climate Reports")
