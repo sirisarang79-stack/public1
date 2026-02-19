@@ -1,137 +1,70 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+from datetime import datetime
 
-# --- 페이지 기본 설정 ---
-st.set_page_config(
-    page_title="기후변화 생물영향 모니터",
-    page_icon="🍊",
-    layout="wide"
-)
+# --- 페이지 설정 ---
+st.set_page_config(page_title="우리반 학급일지", page_icon="📅", layout="centered")
 
-# --- 제목 및 헤더 ---
-st.title("🌏 기후변화와 생태계의 변화")
-st.markdown("""
-이 대시보드는 기후 변화가 **생물 다양성**과 **서식지**에 미치는 영향을 시각화합니다.
-데이터를 통해 과거를 돌아보고, 시뮬레이션을 통해 미래를 예측해 봅시다.
-""")
+# --- 데이터 저장소 초기화 ---
+# 세션 상태(Session State)를 사용하여 앱이 새로고침되어도 데이터가 유지되게 합니다.
+if 'logs' not in st.session_state:
+    st.session_state.logs = pd.DataFrame(columns=["날짜", "날씨", "출석현황", "주요학습내용", "특이사항"])
+
+# --- 헤더 ---
+st.title("🍎 오늘의 학급일지")
+st.write(f"오늘은 **{datetime.now().strftime('%Y년 %m월 %d일')}** 입니다.")
 st.divider()
 
-# --- 사이드바 설정 ---
-with st.sidebar:
-    st.header("⚙️ 설정 및 메뉴")
-    menu = st.radio("메뉴 선택", ["대시보드 (Global Data)", "생태계 시뮬레이터", "한국의 사례"])
-    st.info("💡 **Update:** 감귤 재배지 북상 데이터가 추가되었습니다.")
-
-# --- 데이터 생성 함수 ---
-@st.cache_data
-def load_temp_data():
-    years = np.arange(1850, 2101)
-    anomaly = [0.05 * np.exp(0.025 * (y - 1900)) if y > 1900 else np.random.normal(0, 0.1) for y in years]
-    data = pd.DataFrame({'Year': years, 'Temperature Anomaly (°C)': anomaly})
-    return data
-
-df = load_temp_data()
-
-# --- 1. 대시보드 탭 ---
-if menu == "대시보드 (Global Data)":
-    st.subheader("📈 지구 평균 기온 상승 추이")
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.line_chart(df.set_index('Year'), color="#FF4B4B")
-    with col2:
-        current_anomaly = df[df['Year'] == 2024]['Temperature Anomaly (°C)'].values[0]
-        st.metric(label="2024년 기준", value=f"+{current_anomaly:.2f}°C", delta="산업화 이전 대비")
-        st.warning("상승 추세가 지속되고 있습니다.")
-
-    st.markdown("### 🔍 주요 멸종 위기종 데이터")
-    species_data = {
-        "이름": ["북극곰", "산호초", "바다거북", "황제펭귄"],
-        "위험 요인": ["해빙 감소", "해수 온난화", "산란지 파괴", "유빙 감소"],
-        "등급": ["취약 (VU)", "위급 (CR)", "위기 (EN)", "준위협 (NT)"]
-    }
-    st.table(pd.DataFrame(species_data))
-
-# --- 2. 생태계 시뮬레이터 탭 ---
-elif menu == "생태계 시뮬레이터":
-    st.subheader("🌡️ 온도 상승 시나리오 시뮬레이터")
-    temp_rise = st.slider("지구 온도 상승폭 선택 (°C)", 1.0, 5.0, 1.5, 0.5)
-    st.divider()
-    
+# --- 입력 섹션 ---
+with st.form("log_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
+    
     with col1:
-        st.markdown(f"### 🌡️ +{temp_rise}°C 세계")
-        if temp_rise < 1.5:
-            st.success("기후 방어선 내에 있습니다.")
-            emoji = "🌤️"
-        elif 1.5 <= temp_rise < 2.0:
-            st.warning("티핑 포인트 접근. 산호초 대량 사멸.")
-            emoji = "🔥"
-        elif 2.0 <= temp_rise < 3.0:
-            st.error("돌이킬 수 없는 피해. 빙하 소멸.")
-            emoji = "🐻‍❄️💧"
-        else:
-            st.error("대멸종 위기. 생태계 붕괴.")
-            emoji = "☠️"
-        st.markdown(f"<h1 style='text-align: center; font-size: 80px;'>{emoji}</h1>", unsafe_allow_html=True)
-
+        date = st.date_input("날짜 선택", datetime.now())
+        weather = st.selectbox("오늘의 날씨", ["맑음", "흐림", "비", "눈", "미세먼지 나쁨"])
+        
     with col2:
-        st.markdown("### 🦋 생물학적 영향 예측")
-        if temp_rise >= 1.5: st.write("❌ **산호초 백화 현상** 심화")
-        if temp_rise >= 2.0: st.write("🐟 **해양 어류** 어획량 급감")
-        if temp_rise >= 3.0: st.write("🦟 **열대성 전염병** 고위도 확산")
-        if temp_rise >= 4.0: st.write("🌍 **지구 생물종** 절반 멸종 위기")
+        attendance = st.text_input("출석 현황 (예: 전원 출석 / 결석 1명)", placeholder="출석 정보를 입력하세요")
 
-# --- 3. 한국의 사례 탭 (업데이트됨) ---
-elif menu == "한국의 사례":
-    st.subheader("🇰🇷 한반도 생태계 지도가 바뀐다")
-    st.markdown("기온 상승으로 인해 농작물 재배 한계선이 북상하고 있습니다.")
-    
-    # 탭을 3개로 확장
-    tab1, tab2, tab3 = st.tabs(["🍎 사과 (북상)", "🍊 감귤 (상륙)", "🌲 침엽수 (위기)"])
-    
-    # 1. 사과 탭
-    with tab1:
-        st.markdown("#### 대구 사과는 옛말? 강원도 사과가 온다")
-        st.caption("사과 재배 적지가 경북에서 강원도 산간으로 이동하고 있습니다.")
-        apple_loc = pd.DataFrame({
-            'lat': [35.8, 36.5, 37.1, 38.1], # 대구 -> 충주 -> 정선 -> 양구
-            'lon': [128.6, 128.1, 128.5, 128.1],
-        })
-        st.map(apple_loc, zoom=6)
+    subject_content = st.text_area("주요 학습 내용", placeholder="교시별 핵심 내용을 간단히 적어주세요.")
+    special_note = st.text_area("학급 특이사항 및 전달사항", placeholder="학생 상담, 사고, 공지사항 등")
 
-    # 2. 감귤 탭 (새로 추가된 부분)
-    with tab2:
-        st.markdown("#### 제주 감귤? 이젠 '육지' 감귤!")
-        st.write("따뜻한 남해안 일대까지 아열대 기후가 확장되며 감귤 재배가 가능해졌습니다.")
-        
-        col_map, col_info = st.columns([2, 1])
-        
-        with col_map:
-            # 감귤 재배지 데이터 (제주 -> 전남/경남 해안 -> 내륙)
-            citrus_loc = pd.DataFrame({
-                'lat': [33.35, 34.30, 34.60, 34.85, 35.10],
-                'lon': [126.53, 126.70, 127.10, 128.40, 128.10],
-                # 제주, 완도, 고흥, 통영/거제, 진주(예측)
-            })
-            st.map(citrus_loc, zoom=6, color="#FFA500") # 주황색 포인트 사용(Streamlit 최신버전 지원 시)
-        
-        with col_info:
-            st.info("""
-            **주요 이동 경로**
-            1. **제주도** (전통적 주산지)
-            2. **전남 완도/고흥** (현재 활발)
-            3. **경남 거제/통영** (재배 확대)
-            4. **경남 진주/전북 등** (미래 예측)
-            """)
-            st.success("이제 내륙 지역에서도 노지 감귤 재배가 시도되고 있습니다.")
+    submit_button = st.form_submit_button("일지 저장하기")
 
-    # 3. 침엽수 탭
-    with tab3:
-        st.markdown("#### 사라지는 크리스마스 트리 (구상나무)")
-        st.error("지리산, 한라산의 구상나무가 기온 상승과 수분 부족으로 말라 죽고 있습니다.")
-        st.progress(80, text="지리산 구상나무 고사 진행률 (심각)")
-        st.write("구상나무는 한국 고유종으로, 세계자연보전연맹(IUCN) 멸종위기종입니다.")
+# --- 데이터 저장 로직 ---
+if submit_button:
+    new_data = {
+        "날짜": date.strftime('%Y-%m-%d'),
+        "날씨": weather,
+        "출석현황": attendance,
+        "주요학습내용": subject_content,
+        "특이사항": special_note
+    }
+    # 새로운 데이터를 기존 데이터프레임에 추가
+    st.session_state.logs = pd.concat([st.session_state.logs, pd.DataFrame([new_data])], ignore_index=True)
+    st.success("오늘의 기록이 성공적으로 저장되었습니다!")
 
+# --- 조회 섹션 ---
 st.divider()
-st.caption("Data Source: Simulated based on KMA(기상청) Climate Reports")
+st.subheader("📚 누적 학급 기록")
+
+if not st.session_state.logs.empty:
+    # 최신순으로 정렬하여 보여주기
+    display_df = st.session_state.logs.sort_values(by="날짜", ascending=False)
+    st.dataframe(display_df, use_container_width=True)
+    
+    # CSV 다운로드 기능
+    csv = display_df.to_csv(index=False).encode('utf-8-sig')
+    st.download_button(
+        label="📥 전체 일지 다운로드 (CSV)",
+        data=csv,
+        file_name=f"class_log_{datetime.now().strftime('%Y%m%d')}.csv",
+        mime="text/csv",
+    )
+else:
+    st.info("아직 작성된 일지가 없습니다. 첫 번째 일지를 작성해 보세요!")
+
+# --- 오늘의 한마디 (위트) ---
+st.sidebar.title("💡 선생님의 한마디")
+quote = st.sidebar.text_input("오늘의 응원 메시지", "얘들아, 오늘도 수고했어!")
+st.sidebar.info(f"✨ {quote}")
